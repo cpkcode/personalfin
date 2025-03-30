@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Finance Tracker</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1, h2, h3 {
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        form {
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        form input[type="text"],
+        form input[type="number"],
+        form input[type="date"],
+        form select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            margin-right: 5px;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        form button {
+            padding: 8px 15px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        form button:hover {
+            background-color: #4cae4c;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #eee;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        li span {
+            margin-right: 10px;
+        }
+
+        li .delete-btn {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: auto;
+        }
+
+        li .delete-btn:hover {
+            background-color: #c9302c;
+        }
+
+        #report-section p,
+        #report-section div {
+            margin-bottom: 10px;
+        }
+
+        #report-summary p {
+            font-weight: bold;
+        }
+
+        #report-budget-details div,
+        #report-project-details div {
+             padding: 5px;
+             border-bottom: 1px dashed #eee;
+        }
+
+        .project-expenses-list {
+            margin-top: 10px;
+            margin-left: 20px;
+            font-size: 0.9em;
+            list-style-type: disc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .project-expenses-list li {
+            background: none;
+            border: none;
+            padding: 2px 0;
+            font-size: inherit;
+            display: list-item;
+            margin-left: 20px;
+            justify-content: flex-start;
+        }
+         .project-expenses-list li::before {
+             content: "•";
+             margin-right: 8px;
+         }
+
+        .project-expenses-list .delete-btn {
+            display: none;
+        }
+
+        .optional-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+         #backup-restore-section div {
+            margin-bottom: 15px;
+        }
+
+        #backup-restore-section button {
+            margin-right: 10px;
+             margin-top: 5px;
+        }
+
+        #backup-restore-section input[type="file"] {
+            display: block;
+            margin-bottom: 10px;
+            margin-top: 5px;
+        }
+
+        #restore-status {
+            font-weight: bold;
+            margin-top: 10px;
+            min-height: 1.2em;
+        }
+    </style>
+    </head>
+<body>
+
+    <h1>Personal Finance Tracker</h1>
+
+    <p>
+        This is a simple, client-side finance tracker that helps you manage your income, expenses, budgets, projects, and more.
+        <strong>Your data is stored locally in your browser's storage</strong>, ensuring your privacy.
+        No data is sent to any external servers.
+    </p>
+
+    <p>
+        <strong>Important:</strong> Since this app runs entirely in your browser, your data is not backed up automatically.
+        To prevent data loss, please use the backup feature to download your data as a JSON file.
+    </p>
+
+    <section id="backup-restore-section">
+        <h2>Backup & Restore</h2>
+        <div>
+            <button id="backup-json-btn">Backup Data (Download JSON)</button>
+            <p><small>Downloads all current data to a JSON file. You can save this file as a backup or manually import it into other tools like Google Sheets.</small></p>
+        </div>
+        <hr style="margin: 20px 0;">
+        <div>
+            <h3>Restore Data from JSON</h3>
+            <input type="file" id="restore-json-input" accept=".json">
+            <button id="restore-json-btn">Restore Data</button>
+            <p id="restore-status"></p>
+            <p><small>Select a previously saved JSON backup file. <strong>Warning:</strong> This will overwrite all currently stored data in the application.</small></p>
+        </div>
+    </section>
+
+    <section id="income-section">
+        <h2>Income</h2>
+        <form id="income-form">
+            <input type="text" id="income-source" placeholder="Source (e.g., Salary)" required>
+            <input type="number" id="income-amount" placeholder="Amount" step="0.01" required>
+            <input type="date" id="income-date" required>
+            <button type="submit">Add Income</button>
+        </form>
+        <ul id="income-list"></ul>
+    </section>
+
+    <section id="expense-section">
+        <h2>Expenses</h2>
+        <form id="expense-form">
+            <input type="text" id="expense-description" placeholder="Description (e.g., Groceries)" required>
+            <input type="number" id="expense-amount" placeholder="Amount" step="0.01" required>
+            <input type="text" id="expense-category" placeholder="Category (e.g., Food)" required>
+            <select id="expense-project" title="Optional: Assign to Project">
+                <option value="">-- Assign to Project (Optional) --</option>
+            </select>
+            <input type="date" id="expense-date" required>
+            <button type="submit">Add Expense</button>
+        </form>
+        <ul id="expense-list"></ul>
+    </section>
+
+    <section id="budget-section">
+        <h2>Budgets</h2>
+        <form id="budget-form">
+            <input type="text" id="budget-category" placeholder="Category (e.g., Food)" required>
+            <input type="number" id="budget-amount" placeholder="Budget Amount" step="0.01" required>
+            <button type="submit">Set Budget</button>
+        </form>
+        <ul id="budget-list"></ul>
+    </section>
+
+    <section id="project-section">
+        <h2>Projects</h2>
+        <form id="project-form">
+            <input type="text" id="project-name" placeholder="Project Name (e.g., Vacation)" required>
+            <input type="number" id="project-budget" placeholder="Project Budget" step="0.01" required>
+            <button type="submit">Add Project</button>
+        </form>
+        <ul id="project-list"></ul>
+    </section>
+
+    <section id="account-section">
+        <h2>Financial Accounts</h2>
+        <form id="account-form">
+            <input type="text" id="account-name" placeholder="Account Name (e.g., Checking)" required>
+            <input type="text" id="account-balance" placeholder="Current Balance (Optional)">
+            <button type="submit">Add Account</button>
+        </form>
+        <ul id="account-list"></ul>
+    </section>
+
+    <section id="savings-section">
+        <h2>Savings Goals</h2>
+        <form id="savings-form">
+            <input type="text" id="savings-goal" placeholder="Goal Name (e.g., Emergency Fund)" required>
+            <input type="number" id="savings-target" placeholder="Target Amount" step="0.01" required>
+            <input type="number" id="savings-current" placeholder="Current Amount Saved" step="0.01" required>
+            <button type="submit">Add Goal</button>
+        </form>
+        <ul id="savings-list"></ul>
+    </section>
+
+    <section id="investment-section">
+        <h2>Investments</h2>
+        <form id="investment-form">
+            <input type="text" id="investment-name" placeholder="Investment (e.g., Stock XYZ)" required>
+            <input type="text" id="investment-value" placeholder="Current Value (Optional)">
+            <button type="submit">Add Investment</button>
+        </form>
+        <ul id="investment-list"></ul>
+    </section>
+
+    <section id="debt-section">
+        <h2>Debts</h2>
+        <form id="debt-form">
+            <input type="text" id="debt-name" placeholder="Debt Name (e.g., Student Loan)" required>
+            <input type="number" id="debt-balance" placeholder="Outstanding Balance" step="0.01" required>
+            <button type="submit">Add Debt</button>
+        </form>
+        <ul id="debt-list"></ul>
+    </section>
+
+    <section id="wishlist-section">
+        <h2>Wishlist</h2>
+        <form id="wishlist-form">
+            <input type="text" id="wishlist-item" placeholder="Item Name (e.g., New Laptop)" required>
+            <input type="number" id="wishlist-cost" placeholder="Estimated Cost" step="0.01" required>
+            <button type="submit">Add Wishlist Item</button>
+        </form>
+        <ul id="wishlist-list"></ul>
+    </section>
+
+    <section id="report-section">
+        <h2>Reports</h2>
+        <div id="report-summary">
+            <p>Total Income: $<span id="total-income">0.00</span></p>
+            <p>Total Expenses: $<span id="total-expenses">0.00</span></p>
+            <p>Net Difference: $<span id="net-difference">0.00</span></p>
+        </div>
+        <h3>Budget vs. Spent</h3>
+        <div id="report-budget-details">
+        </div>
+        <h3>Project Spending</h3>
+        <div id="report-project-details">
+        </div>
+    </section>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Global Data Store ---
+            let financeData = {
+                incomes: [],
+                expenses: [],
+                budgets: {}, // { category: amount }
+                projects: [], // { name: string, budget: number, id: string }
+                accounts: [], // { name: string, balance: string, id: string }
+                savings: [],  // { goal: string, target: number, current: number, id: string }
+                investments: [], // { name: string, value: string, id: string }
+                debts: [], // { name: string, balance: number, id: string }
+                wishlist: [] // { item: string, cost: number, id: string }
+            };
+
+            // --- DOM Elements ---
+            // Forms
+            const incomeForm = document.getElementById('income-form');
+            const expenseForm = document.getElementById('expense-form');
+            const budgetForm = document.getElementById('budget-form');
+            const projectForm = document.getElementById('project-form');
+            const accountForm = document.getElementById('account-form');
+            const savingsForm = document.getElementById('savings-form');
+            const investmentForm = document.getElementById('investment-form');
+            const debtForm = document.getElementById('debt-form');
+            const wishlistForm = document.getElementById('wishlist-form');
+
+            // Lists/Containers
+            const incomeList = document.getElementById('income-list');
+            const expenseList = document.getElementById('expense-list');
+            const budgetList = document.getElementById('budget-list');
+            const projectList = document.getElementById('project-list');
+            const accountList = document.getElementById('account-list');
+            const savingsList = document.getElementById('savings-list');
+            const investmentList = document.getElementById('investment-list');
+            const debtList = document.getElementById('debt-list');
+            const wishlistList = document.getElementById('wishlist-list');
+
+            // Report Elements
+            const totalIncomeEl = document.getElementById('total-income');
+            const totalExpensesEl = document.getElementById('total-expenses');
+            const netDifferenceEl = document.getElementById('net-difference');
+            const reportBudgetDetailsEl = document.getElementById('report-budget-details');
+            const reportProjectDetailsEl = document.getElementById('report-project-details');
+
+            // Expense Project Dropdown
+            const expenseProjectSelect = document.getElementById('expense-project');
+
+            // Backup/Restore Elements
+            const backupJsonBtn = document.getElementById('backup-json-btn');
+            const restoreJsonInput = document.getElementById('restore-json-input');
+            const restoreJsonBtn = document.getElementById('restore-json-btn');
+            const restoreStatusEl = document.getElementById('restore-status');
+
+
+            // --- Utility Functions ---
+            const generateId = () => '_' + Math.random().toString(36).substr(2, 9); // Simple unique ID
+
+            // --- Data Persistence ---
+            const saveData = () => {
+                try {
+                    localStorage.setItem('financeData', JSON.stringify(financeData));
+                    console.log("Data saved to localStorage.");
+                } catch (e) {
+                    console.error("Error saving data to localStorage:", e);
+                    alert("Could not save data. LocalStorage might be full or disabled.");
+                }
+            };
+
+            const loadData = () => {
+                const data = localStorage.getItem('financeData');
+                if (data) {
+                    try {
+                        financeData = JSON.parse(data);
+                        // Ensure all parts of the structure exist if loading older data
+                        financeData.incomes = financeData.incomes || [];
+                        financeData.expenses = financeData.expenses || [];
+                        financeData.budgets = financeData.budgets || {};
+                        financeData.projects = financeData.projects || [];
+                        financeData.accounts = financeData.accounts || [];
+                        financeData.savings = financeData.savings || [];
+                        financeData.investments = financeData.investments || [];
+                        financeData.debts = financeData.debts || [];
+                        financeData.wishlist = financeData.wishlist || [];
+                        console.log("Data loaded from localStorage.");
+                    } catch (e) {
+                        console.error("Error parsing data from localStorage:", e);
+                        alert("Error loading saved data. It might be corrupted. Starting with empty data.");
+                        initializeEmptyData(); // Reset if parsing fails
+                    }
+                } else {
+                    initializeEmptyData();
+                    console.log("No data found in localStorage. Initialized empty data structure.");
+                }
+            };
+
+            const initializeEmptyData = () => {
+                financeData = {
+                    incomes: [], expenses: [], budgets: {}, projects: [],
+                    accounts: [], savings: [], investments: [], debts: [], wishlist: []
+                };
+            };
+
+
+            // --- Rendering Functions ---
+            const renderIncomes = () => {
+                incomeList.innerHTML = '';
+                financeData.incomes.forEach((income, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${escapeHtml(income.source)}</span>
+                        <span>$${parseFloat(income.amount).toFixed(2)}</span>
+                        <span>${escapeHtml(income.date)}</span>
+                        <button class="delete-btn" data-index="${index}" data-type="income">Delete</button>
+                    `;
+                    incomeList.appendChild(li);
+                });
+            };
+
+            const renderExpenses = () => {
+                expenseList.innerHTML = '';
+                financeData.expenses.forEach((expense, index) => {
+                    const li = document.createElement('li');
+                    const project = financeData.projects.find(p => p.id === expense.projectId);
+                    const projectName = project ? escapeHtml(project.name) : 'None';
+                    li.innerHTML = `
+                        <span>${escapeHtml(expense.description)}</span>
+                        <span>$${parseFloat(expense.amount).toFixed(2)}</span>
+                        <span>(${escapeHtml(expense.category)})</span>
+                        <span>Project: ${projectName}</span>
+                        <span>${escapeHtml(expense.date)}</span>
+                        <button class="delete-btn" data-index="${index}" data-type="expense">Delete</button>
+                    `;
+                    expenseList.appendChild(li);
+                });
+            };
+
+            const renderBudgets = () => {
+                budgetList.innerHTML = '';
+                for (const category in financeData.budgets) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${escapeHtml(category)}</span>
+                        <span>$${parseFloat(financeData.budgets[category]).toFixed(2)}</span>
+                        <button class="delete-btn" data-category="${category}" data-type="budget">Delete</button>
+                    `;
+                    budgetList.appendChild(li);
+                }
+            };
+
+            const renderProjects = () => {
+                projectList.innerHTML = '';
+                // Clear existing options except the first default one
+                while (expenseProjectSelect.options.length > 1) {
+                    expenseProjectSelect.remove(1);
+                }
+
+                financeData.projects.forEach((project, index) => {
+                    // Render project list item
+                    const li = document.createElement('li');
+                    // Find expenses associated with this project
+                    const projectExpenses = financeData.expenses.filter(exp => exp.projectId === project.id);
+                    const totalSpent = projectExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+
+                    let expensesHtml = '<ul class="project-expenses-list">';
+                    if (projectExpenses.length > 0) {
+                        projectExpenses.forEach(exp => {
+                            expensesHtml += `<li>${escapeHtml(exp.description)}: $${parseFloat(exp.amount).toFixed(2)} (${escapeHtml(exp.date)})</li>`;
+                        });
+                    } else {
+                        expensesHtml += '<li>No expenses assigned yet.</li>';
+                    }
+                    expensesHtml += '</ul>';
+
+                    li.innerHTML = `
+                        <div style="width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 5px;">
+                            <span><strong>${escapeHtml(project.name)}</strong></span>
+                            <span>Budget: $${parseFloat(project.budget).toFixed(2)}</span>
+                            <span>Spent: $${totalSpent.toFixed(2)}</span>
+                            <span>Remaining: $${(parseFloat(project.budget) - totalSpent).toFixed(2)}</span>
+                            <button class="delete-btn" data-index="${index}" data-type="project" style="margin-left: 10px;">Delete Project</button>
+                        </div>
+                        ${expensesHtml}
+                    `;
+                    projectList.appendChild(li);
+
+                    // Populate expense dropdown
+                    const option = document.createElement('option');
+                    option.value = project.id;
+                    option.textContent = escapeHtml(project.name);
+                    expenseProjectSelect.appendChild(option);
+                });
+            };
+
+            const renderAccounts = () => {
+                accountList.innerHTML = '';
+                financeData.accounts.forEach((account, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${escapeHtml(account.name)}</span>
+                        <span class="optional-info">${account.balance ? 'Balance: ' + escapeHtml(account.balance) : ''}</span>
+                        <button class="delete-btn" data-index="${index}" data-type="account">Delete</button>
+                    `;
+                    accountList.appendChild(li);
+                });
+            };
+
+            const renderSavings = () => {
+                savingsList.innerHTML = '';
+                financeData.savings.forEach((goal, index) => {
+                    const li = document.createElement('li');
+                    const targetAmount = parseFloat(goal.target);
+                    const currentAmount = parseFloat(goal.current);
+                    const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
+                    li.innerHTML = `
+                        <span>${escapeHtml(goal.goal)}</span>
+                        <span>Target: $${targetAmount.toFixed(2)}</span>
+                        <span>Saved: $${currentAmount.toFixed(2)}</span>
+                        <span>Progress: ${progress.toFixed(1)}%</span>
+                        <button class="delete-btn" data-index="${index}" data-type="savings">Delete</button>
+                    `;
+                    savingsList.appendChild(li);
+                });
+            };
+
+            const renderInvestments = () => {
+                investmentList.innerHTML = '';
+                financeData.investments.forEach((inv, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${escapeHtml(inv.name)}</span>
+                        <span class="optional-info">${inv.value ? 'Value: ' + escapeHtml(inv.value) : ''}</span>
+                        <button class="delete-btn" data-index="${index}" data-type="investment">Delete</button>
+                    `;
+                    investmentList.appendChild(li);
+                });
+            };
+
+            const renderDebts = () => {
+                debtList.innerHTML = '';
+                financeData.debts.forEach((debt, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${escapeHtml(debt.name)}</span>
+                        <span>Balance: $${parseFloat(debt.balance).toFixed(2)}</span>
+                        <button class="delete-btn" data-index="${index}" data-type="debt">Delete</button>
+                    `;
+                    debtList.appendChild(li);
+                });
+            };
+
+            const renderWishlist = () => {
+                wishlistList.innerHTML = '';
+                financeData.wishlist.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${escapeHtml(item.item)}</span>
+                        <span>Est. Cost: $${parseFloat(item.cost).toFixed(2)}</span>
+                        <button class="delete-btn" data-index="${index}" data-type="wishlist">Delete</button>
+                    `;
+                    wishlistList.appendChild(li);
+                });
+            };
+
+            // Helper function to escape HTML characters (basic security measure)
+            const escapeHtml = (unsafe) => {
+                if (typeof unsafe !== 'string') return unsafe;
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            };
+
+
+            // Render everything
+            const renderAll = () => {
+                renderIncomes();
+                renderExpenses();
+                renderBudgets();
+                renderProjects(); // Renders projects AND populates the expense project dropdown
+                renderAccounts();
+                renderSavings();
+                renderInvestments();
+                renderDebts();
+                renderWishlist();
+                updateReports(); // Make sure reports are updated too
+                console.log("All sections re-rendered.");
+            };
+
+
+            // --- Report Update ---
+            const updateReports = () => {
+                // Basic Summary
+                const totalIncome = financeData.incomes.reduce((sum, inc) => sum + parseFloat(inc.amount || 0), 0);
+                const totalExpenses = financeData.expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                const netDifference = totalIncome - totalExpenses;
+
+                totalIncomeEl.textContent = totalIncome.toFixed(2);
+                totalExpensesEl.textContent = totalExpenses.toFixed(2);
+                netDifferenceEl.textContent = netDifference.toFixed(2);
+                netDifferenceEl.style.color = netDifference >= 0 ? 'green' : 'red';
+
+                // Budget Details
+                reportBudgetDetailsEl.innerHTML = ''; // Clear previous details
+                const expensesByCategory = financeData.expenses.reduce((acc, exp) => {
+                    // Ensure category is treated consistently (e.g., lowercase, trim)
+                    const categoryKey = (exp.category ||'Uncategorized').trim(); //.toLowerCase(); // Optional: make case-insensitive
+                    acc[categoryKey] = (acc[categoryKey] || 0) + parseFloat(exp.amount || 0);
+                    return acc;
+                }, {});
+
+                const processedBudgetCategories = new Set();
+
+                for (const budgetCategory in financeData.budgets) {
+                    const categoryKey = budgetCategory.trim(); //.toLowerCase(); // Optional: make case-insensitive
+                    const budgetAmount = parseFloat(financeData.budgets[budgetCategory] || 0);
+                    const spentAmount = expensesByCategory[categoryKey] || 0;
+                    const remaining = budgetAmount - spentAmount;
+                    const overUnder = remaining >= 0 ? 'Under Budget' : 'Over Budget';
+                    const color = remaining >= 0 ? 'green' : 'red';
+
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <strong>${escapeHtml(budgetCategory)}:</strong>
+                        Budget: $${budgetAmount.toFixed(2)} |
+                        Spent: $${spentAmount.toFixed(2)} |
+                        Remaining: <span style="color:${color};">$${Math.abs(remaining).toFixed(2)} (${overUnder})</span>
+                    `;
+                    reportBudgetDetailsEl.appendChild(div);
+                    processedBudgetCategories.add(categoryKey); // Mark as processed
+                }
+
+                // Add categories with spending but no budget
+                for (const spentCategory in expensesByCategory) {
+                    if (!processedBudgetCategories.has(spentCategory)) {
+                        const spentAmount = expensesByCategory[spentCategory];
+                        const div = document.createElement('div');
+                        // Find original casing if possible (for display) - slightly complex, might skip for simplicity
+                        // Let's just display the key used (which might be lowercased if implemented above)
+                        div.innerHTML = `
+                            <strong>${escapeHtml(spentCategory)} (Unbudgeted):</strong>
+                            Spent: $${spentAmount.toFixed(2)}
+                        `;
+                        reportBudgetDetailsEl.appendChild(div);
+                    }
+                }
+
+
+                // Project Spending Details
+                reportProjectDetailsEl.innerHTML = ''; // Clear previous details
+                financeData.projects.forEach(project => {
+                    const projectExpenses = financeData.expenses.filter(exp => exp.projectId === project.id);
+                    const totalSpent = projectExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                    const projectBudget = parseFloat(project.budget || 0);
+                    const remaining = projectBudget - totalSpent;
+                    const color = remaining >= 0 ? 'green' : 'red';
+
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <strong>${escapeHtml(project.name)}:</strong>
+                        Budget: $${projectBudget.toFixed(2)} |
+                        Spent: $${totalSpent.toFixed(2)} |
+                        Remaining: <span style="color:${color};">$${Math.abs(remaining).toFixed(2)}</span>
+                    `;
+                    reportProjectDetailsEl.appendChild(div);
+                });
+            };
+
+
+            // --- Event Handlers ---
+            // Add Income
+            incomeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('income-amount').value);
+                if (isNaN(amount) || amount <= 0) {
+                    alert('Please enter a valid positive income amount.');
+                    return;
+                }
+                const newIncome = {
+                    id: generateId(),
+                    source: document.getElementById('income-source').value.trim(),
+                    amount: amount,
+                    date: document.getElementById('income-date').value
+                };
+                financeData.incomes.push(newIncome);
+                saveData();
+                renderIncomes();
+                updateReports();
+                incomeForm.reset();
+            });
+
+            // Add Expense
+            expenseForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('expense-amount').value);
+                if (isNaN(amount) || amount <= 0) {
+                    alert('Please enter a valid positive expense amount.');
+                    return;
+                }
+                const newExpense = {
+                    id: generateId(),
+                    description: document.getElementById('expense-description').value.trim(),
+                    amount: amount,
+                    category: document.getElementById('expense-category').value.trim(),
+                    projectId: document.getElementById('expense-project').value, // Get selected project ID
+                    date: document.getElementById('expense-date').value
+                };
+                financeData.expenses.push(newExpense);
+                saveData();
+                renderExpenses();
+                updateReports();
+                expenseForm.reset();
+            });
+
+            // Add Budget
+            budgetForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('budget-amount').value);
+                if (isNaN(amount) || amount <= 0) {
+                    alert('Please enter a valid positive budget amount.');
+                    return;
+                }
+                const category = document.getElementById('budget-category').value.trim();
+                 if (!category) {
+                    alert('Please enter a budget category.');
+                    return;
+                }
+                financeData.budgets[category] = amount; // Use directly
+                saveData();
+                renderBudgets();
+                updateReports();
+                budgetForm.reset();
+            });
+
+            // Add Project
+            projectForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const budget = parseFloat(document.getElementById('project-budget').value);
+                if (isNaN(budget) || budget <= 0) {
+                    alert('Please enter a valid positive project budget.');
+                    return;
+                }
+                const newProject = {
+                    id: generateId(),
+                    name: document.getElementById('project-name').value.trim(),
+                    budget: budget
+                };
+                financeData.projects.push(newProject);
+                saveData();
+                renderProjects(); // This also updates the expense dropdown
+                updateReports();
+                projectForm.reset();
+            });
+
+            // Add Account
+            accountForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newAccount = {
+                    id: generateId(),
+                    name: document.getElementById('account-name').value.trim(),
+                    balance: document.getElementById('account-balance').value.trim() // Can be empty
+                };
+                financeData.accounts.push(newAccount);
+                saveData();
+                renderAccounts();
+                accountForm.reset();
+            });
+
+            // Add Savings Goal
+            savingsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const target = parseFloat(document.getElementById('savings-target').value);
+                const current = parseFloat(document.getElementById('savings-current').value);
+                if (isNaN(target) || target <= 0 || isNaN(current) || current < 0) {
+                    alert('Please enter valid target and current amounts.');
+                    return;
+                }
+                const newGoal = {
+                    id: generateId(),
+                    goal: document.getElementById('savings-goal').value.trim(),
+                    target: target,
+                    current: current
+                };
+                financeData.savings.push(newGoal);
+                saveData();
+                renderSavings();
+                savingsForm.reset();
+            });
+
+            // Add Investment
+            investmentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newInvestment = {
+                    id: generateId(),
+                    name: document.getElementById('investment-name').value.trim(),
+                    value: document.getElementById('investment-value').value.trim() // Can be empty
+                };
+                financeData.investments.push(newInvestment);
+                saveData();
+                renderInvestments();
+                investmentForm.reset();
+            });
+
+            // Add Debt
+            debtForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const balance = parseFloat(document.getElementById('debt-balance').value);
+                 if (isNaN(balance) || balance <= 0) {
+                    alert('Please enter a valid positive debt balance.');
+                    return;
+                }
+                const newDebt = {
+                    id: generateId(),
+                    name: document.getElementById('debt-name').value.trim(),
+                    balance: balance
+                };
+                financeData.debts.push(newDebt);
+                saveData();
+                renderDebts();
+                debtForm.reset();
+            });
+
+            // Add Wishlist Item
+            wishlistForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const cost = parseFloat(document.getElementById('wishlist-cost').value);
+                if (isNaN(cost) || cost <= 0) {
+                    alert('Please enter a valid positive cost.');
+                    return;
+                }
+                const newItem = {
+                    id: generateId(),
+                    item: document.getElementById('wishlist-item').value.trim(),
+                    cost: cost
+                };
+                financeData.wishlist.push(newItem);
+                saveData();
+                renderWishlist();
+                wishlistForm.reset();
+            });
+
+            // --- Delete Handlers (using event delegation) ---
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const type = e.target.dataset.type;
+                    if (type === 'income') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.incomes.splice(index, 1);
+                    } else if (type === 'expense') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.expenses.splice(index, 1);
+                    } else if (type === 'budget') {
+                        const category = e.target.dataset.category;
+                        delete financeData.budgets[category];
+                    } else if (type === 'project') {
+                         const index = parseInt(e.target.dataset.index);
+                         const projectIdToDelete = financeData.projects[index].id;
+                        // Remove the project
+                         financeData.projects.splice(index, 1);
+                         // Remove any expenses associated with the project
+                         financeData.expenses = financeData.expenses.filter(expense => expense.projectId !== projectIdToDelete);
+
+                    } else if (type === 'account') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.accounts.splice(index, 1);
+                    } else if (type === 'savings') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.savings.splice(index, 1);
+                    } else if (type === 'investment') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.investments.splice(index, 1);
+                    } else if (type === 'debt') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.debts.splice(index, 1);
+                    } else if (type === 'wishlist') {
+                        const index = parseInt(e.target.dataset.index);
+                        financeData.wishlist.splice(index, 1);
+                    }
+                    saveData();
+                    renderAll(); // Re-render all lists to reflect changes
+                }
+            });
+
+            // --- Backup and Restore ---
+            backupJsonBtn.addEventListener('click', () => {
+                const dataStr = JSON.stringify(financeData, null, 2); // Pretty print JSON
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'finance-data-backup.json';
+                document.body.appendChild(a); // Append, trigger, and remove
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log("Data backed up to JSON file.");
+            });
+
+            restoreJsonBtn.addEventListener('click', () => {
+                const file = restoreJsonInput.files[0];
+                if (!file) {
+                    restoreStatusEl.textContent = 'Please select a file to restore.';
+                    restoreStatusEl.style.color = 'red';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const restoredData = JSON.parse(e.target.result);
+                         if (typeof restoredData !== 'object') {
+                            throw new Error("Invalid data structure: Root must be an object.");
+                        }
+                        financeData = restoredData;
+                        saveData();
+                        renderAll();
+                        restoreStatusEl.textContent = 'Data successfully restored!';
+                        restoreStatusEl.style.color = 'green';
+                        console.log("Data restored from JSON file.");
+                    } catch (error) {
+                        restoreStatusEl.textContent = 'Error restoring data: ' + error.message;
+                        restoreStatusEl.style.color = 'red';
+                        console.error("Error restoring data:", error);
+                        initializeEmptyData();
+                        renderAll();
+                    }
+                };
+                reader.onerror = () => {
+                    restoreStatusEl.textContent = 'Error reading file.';
+                    restoreStatusEl.style.color = 'red';
+                    console.error("Error reading file");
+                };
+                reader.readAsText(file);
+                restoreJsonInput.value = ''; // Clear input after use
+            });
+
+
+            // --- Initialize ---
+            loadData();
+            renderAll(); // Initial render
+        });
+    </script>
+</body>
+</html>
